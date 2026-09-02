@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Basket Plans — build a basket, get a code</title>
+  <meta name="description" content="Tap what you want, get a basket code, send it to WhatsApp." />
+  <meta name="theme-color" content="#FBF9F5" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <!-- Shop picker -->
+  <section id="shop-view" class="view">
+    <header class="hero">
+      <h1>What are we shopping?</h1>
+      <p>Pick a shop, tap what you want, and we'll give you a code to send on WhatsApp.</p>
+    </header>
+    <div id="shop-list" class="shop-list" aria-live="polite">
+      <div class="skeleton-shop"></div>
+      <div class="skeleton-shop"></div>
+      <div class="skeleton-shop"></div>
+    </div>
+  </section>
+
+  <!-- Catalogue -->
+  <section id="catalogue-view" class="view" hidden>
+    <header class="topbar">
+      <button id="back-to-shops" class="icon-btn" aria-label="Change shop">←</button>
+      <div class="topbar-store">
+        <img id="store-logo" alt="" hidden />
+        <div>
+          <span id="store-name" class="store-name">Shop</span>
+          <span id="store-meta" class="store-meta"></span>
+        </div>
+      </div>
+    </header>
+
+    <div class="search-wrap">
+      <input id="search" type="search" placeholder="Search the shelves…" autocomplete="off" enterkeyhint="search" />
+    </div>
+
+    <nav id="categories" class="chips" aria-label="Categories"></nav>
+
+    <div id="grid" class="grid" aria-live="polite"></div>
+    <div id="grid-empty" class="empty" hidden></div>
+    <div class="grid-spacer"></div>
+  </section>
+
+  <!-- Floating basket -->
+  <aside id="basket" class="basket" hidden>
+    <div class="basket-code-row">
+      <div class="code-block">
+        <span class="code-label">Your basket code</span>
+        <strong id="code" class="code" aria-live="polite">······</strong>
+      </div>
+      <div class="basket-totals">
+        <span id="basket-count" class="basket-count">0 items</span>
+        <strong id="basket-total" class="basket-total">—</strong>
+      </div>
+    </div>
+
+    <div id="basket-strip" class="basket-strip"></div>
+
+    <div class="basket-actions">
+      <button id="copy-btn" class="btn btn-ghost" type="button">Copy basket</button>
+      <button id="share-btn" class="btn btn-primary" type="button">Send to WhatsApp</button>
+    </div>
+    <p id="sync-state" class="sync-state"></p>
+  </aside>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
