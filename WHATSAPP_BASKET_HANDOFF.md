@@ -57,6 +57,11 @@ cd web && vercel deploy --prod     # or netlify deploy, or any static host
 
 There is no build step. `web/index.html` is the entry point.
 
+The repo-root `vercel.json` points the connected `basket-plans` Vercel
+project at `web/` as a static site, so a push deploys the basket page. It
+also turns off framework detection — the project was set to the Next.js
+preset, which fails against this repo because there is no Next.js in it.
+
 ## The code
 
 Six characters from `23456789ABCDEFGHJKMNPQRSTVWXYZ` — no `0`/`O`, no
