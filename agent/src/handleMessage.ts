@@ -6,7 +6,8 @@ import { env } from "./env.js";
 import { identify, roleBrief } from "./identity.js";
 import { loadMemory, logMessage } from "./memory.js";
 import { maybeSummarize } from "./summarize.js";
-import { basketTools } from "./tools.js";
+import { makeBasketTools } from "./tools.js";
+import { resolveStore } from "./store.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -24,19 +25,44 @@ const client = new Anthropic({ apiKey: env.anthropicApiKey });
 
 /**
  * The whole send-and-reply cycle for one inbound WhatsApp message.
- * Call this from whatever receives the webhook (see sendWhatsApp.ts and
- * the README for wiring this into an actual WhatsApp Cloud API endpoint).
+ * Call this from whatever receives the webhook (see webhook.ts and the
+ * README for wiring this into an actual WhatsApp Cloud API endpoint).
+ *
+ * businessPhoneNumberId is the shop's own WhatsApp number the message
+ * arrived on (Meta's metadata.phone_number_id) — it's how we know which
+ * shop's catalog and baskets this conversation is scoped to, with no
+ * "which shop?" question ever asked. See store.ts.
  */
-export async function handleIncomingMessage(phone: string, text: string): Promise<string> {
+export async function handleIncomingMessage(
+  businessPhoneNumberId: string,
+  phone: string,
+  text: string,
+): Promise<string> {
   await logMessage(phone, "in", text);
 
-  // Identity and memory are looked up here, server-side, from our own
-  // database — never derived from the message text itself. This is what
-  // makes the operator note below non-spoofable.
-  const [identity, memory] = await Promise.all([identify(phone), loadMemory(phone)]);
+  // Identity, memory, and the shop this number belongs to are all looked
+  // up here, server-side, from our own database — never derived from the
+  // message text itself. This is what makes the operator note below
+  // non-spoofable.
+  const [identity, memory, store] = await Promise.all([
+    identify(phone),
+    loadMemory(phone),
+    resolveStore(businessPhoneNumberId),
+  ]);
+
+  if (!store) {
+    // No shop is configured for this number yet — nothing downstream
+    // (search, basket, pricing) has anywhere to point. Fail loudly rather
+    // than guessing a store, since guessing wrong would quote someone
+    // else's prices.
+    const reply = "Sorry, this number isn't set up for ordering yet — a human will follow up.";
+    await logMessage(phone, "out", reply);
+    return reply;
+  }
 
   const operatorNote = [
     roleBrief(identity),
+    `This conversation is with ${store.name}.`,
     memory.summary ? `Long-term notes on this contact: ${memory.summary}` : null,
   ]
     .filter(Boolean)
@@ -60,7 +86,7 @@ export async function handleIncomingMessage(phone: string, text: string): Promis
     // Automatic caching for the growing message tail (recent turns +
     // this turn) — the robust combination for an agent loop like this one.
     cache_control: { type: "ephemeral" },
-    tools: basketTools,
+    tools: makeBasketTools(store.id, phone),
     messages: [
       ...messages,
       // Appended AFTER the user turn, as its own operator-only message —

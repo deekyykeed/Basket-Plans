@@ -18,9 +18,10 @@ process, done. No code change.
 | `system-prompt.md` | The instructions — edit this |
 | `schema.sql` | Three Supabase tables this needs (run once) |
 | `src/identity.ts` | Decides customer / staff / supplier from the phone number |
+| `src/store.ts` | Decides which shop a conversation belongs to, from the WhatsApp number it arrived on |
 | `src/memory.ts` | Loads recent history + long-term summary for a conversation |
 | `src/summarize.ts` | Periodically compresses old history into that summary |
-| `src/tools.ts` | The three tools wired to `resolve-basket` (resolve/negotiate/place order) |
+| `src/tools.ts` | `makeBasketTools(storeId, phone)` — search/add/remove/view/negotiate/order, all wired to `resolve-basket` |
 | `src/handleMessage.ts` | The actual send-a-message-get-a-reply cycle |
 | `src/webhook.ts`, `src/sendWhatsApp.ts` | Where to plug in your real WhatsApp Cloud API credentials |
 
@@ -35,23 +36,48 @@ cp .env.example .env   # fill in the real values
 You need: an Anthropic API key, this Supabase project's URL + service role
 key, the `BASKET_AGENT_KEY` from `resolve-basket`'s setup, and your
 WhatsApp Cloud API credentials. Then run `schema.sql` in the Supabase SQL
-editor (after `supabase-setup.sql` and `supabase-basket-codes.sql`).
+editor (after `supabase-setup.sql`, `supabase-basket-codes.sql`, and
+`supabase-conversational-basket.sql`), and set each shop's
+`stores.whatsapp_number` to the Meta phone number id customers message —
+that's what `store.ts` uses to route a conversation to the right shop.
 
 This code isn't hosted anywhere yet — `webhook.ts` is a sketch you plug
 into whatever receives your WhatsApp webhook today (a Vercel function, an
 Express server, wherever). Point that endpoint at `onWhatsAppWebhook`.
 
+## WhatsApp first — there is no basket code in the normal flow
+
+The priority right now is chat: a customer opens WhatsApp and builds a
+basket by talking, full stop. No web page, no code to type in. The web
+basket picker still exists elsewhere in this repo as a second way in — a
+customer who starts there ends up with a code they can paste into chat —
+but it's not what this agent expects or waits for. `resolve_basket` (the
+code-lookup tool) still works for that handoff case; every other tool
+(`search_products`, `add_item`, `remove_item`, `view_basket`,
+`negotiate_basket`, `place_order`) works purely from the store + phone the
+conversation is already scoped to, so a basket can be built and ordered
+without a code ever existing.
+
+Where the order goes after `place_order` is deliberately just Supabase for
+now (`orders`, `source: 'whatsapp'`) — routing confirmed orders to
+something a human picks up from (Linear or otherwise) is a later decision,
+not built here yet.
+
 ## The message cycle, mapped to actual files
 
-1. Meta calls your webhook → `webhook.ts` pulls out the phone number and text.
-2. `handleMessage.ts` logs the message, looks up **who's messaging**
-   (`identity.ts`) and **what's worth remembering** (`memory.ts`).
-3. It calls Claude with the frozen system prompt, the tools, recent
-   history, and an operator note about who this is.
-4. Claude replies, possibly after calling `resolve_basket` /
-   `negotiate_basket` / `place_order` — real HTTP calls into the
-   `resolve-basket` Edge Function from the main basket work.
-5. The reply goes back out through `sendWhatsApp.ts`.
+1. Meta calls your webhook → `webhook.ts` pulls out the **business** phone
+   number id the message arrived on, plus the customer's number and text.
+2. `handleMessage.ts` logs the message, looks up **which shop this is**
+   (`store.ts`), **who's messaging** (`identity.ts`), and **what's worth
+   remembering** (`memory.ts`). No shop configured for that number → a
+   plain fallback reply, nothing downstream runs.
+3. It calls Claude with the frozen system prompt, `makeBasketTools(storeId, phone)`,
+   recent history, and an operator note about who this is and which shop.
+4. Claude replies, possibly after calling one of the basket tools — real
+   HTTP calls into the `resolve-basket` Edge Function, always scoped to
+   that store and phone.
+5. The reply goes back out through `sendWhatsApp.ts`, from that same
+   business number.
 6. The turn is logged, and `summarize.ts` checks — cheaply — whether it's
    time to fold old history into the long-term summary.
 

@@ -4,14 +4,17 @@
 //
 // Docs: https://developers.facebook.com/docs/whatsapp/cloud-api/reference/messages
 
-export async function sendWhatsAppMessage(phone: string, text: string): Promise<void> {
+// businessPhoneNumberId picks which of the shop's numbers the reply goes
+// out from — it's the same id the webhook received the message on (see
+// webhook.ts), not a fixed env var, since different shops send from
+// different numbers under the one WhatsApp Business account.
+export async function sendWhatsAppMessage(businessPhoneNumberId: string, phone: string, text: string): Promise<void> {
   const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-  if (!accessToken || !phoneNumberId) {
-    throw new Error("WHATSAPP_ACCESS_TOKEN / WHATSAPP_PHONE_NUMBER_ID not set — see .env.example");
+  if (!accessToken) {
+    throw new Error("WHATSAPP_ACCESS_TOKEN not set — see .env.example");
   }
 
-  const res = await fetch(`https://graph.facebook.com/v21.0/${phoneNumberId}/messages`, {
+  const res = await fetch(`https://graph.facebook.com/v21.0/${businessPhoneNumberId}/messages`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`,

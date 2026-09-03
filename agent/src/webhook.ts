@@ -14,6 +14,7 @@ interface WhatsAppWebhookPayload {
   entry: Array<{
     changes: Array<{
       value: {
+        metadata: { phone_number_id: string };
         messages?: Array<{ from: string; text?: { body: string } }>;
       };
     }>;
@@ -21,9 +22,11 @@ interface WhatsAppWebhookPayload {
 }
 
 export async function onWhatsAppWebhook(payload: WhatsAppWebhookPayload): Promise<void> {
-  const message = payload.entry[0]?.changes[0]?.value.messages?.[0];
+  const value = payload.entry[0]?.changes[0]?.value;
+  const message = value?.messages?.[0];
   if (!message?.text) return; // ignore non-text messages (images, reactions, etc.)
 
-  const reply = await handleIncomingMessage(message.from, message.text.body);
-  await sendWhatsAppMessage(message.from, reply);
+  const businessPhoneNumberId = value.metadata.phone_number_id;
+  const reply = await handleIncomingMessage(businessPhoneNumberId, message.from, message.text.body);
+  await sendWhatsAppMessage(businessPhoneNumberId, message.from, reply);
 }
