@@ -1,0 +1,21 @@
+{
+  "name": "basket-plans-agent",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "WhatsApp ordering agent for Basket Plans — Claude API + Supabase. Standalone from the Expo app on purpose.",
+  "scripts": {
+    "build": "tsc -p .",
+    "typecheck": "tsc -p . --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.123.0",
+    "@supabase/supabase-js": "^2.86.0",
+    "zod": "^4.5.0",
+    "dotenv": "^16.4.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "@types/node": "^22.0.0"
+  }
+}

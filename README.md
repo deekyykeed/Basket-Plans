@@ -88,6 +88,24 @@ The basket is a floating horizontal bar at the bottom of the screen that:
 - Featured products flag
 - Category relationships
 
+## Web Basket → WhatsApp
+
+Orders are taken over WhatsApp. For a shopper who doesn't know exactly what
+they want, `web/` is a page they can browse instead: tap product images to
+fill a basket, and the page gives them a six-character code.
+
+They paste that code into WhatsApp. The agent calls the `resolve-basket`
+Edge Function, which turns the code back into the itemised basket, quotes it
+at today's prices, and hands back the range it may negotiate within. When
+the price is agreed, the same function writes the order.
+
+```
+tap tap tap  →  code K7M4QP  →  paste in WhatsApp  →  quote → haggle → order
+```
+
+Setup, the agent API, and the commercial settings are in
+[`WHATSAPP_BASKET_HANDOFF.md`](WHATSAPP_BASKET_HANDOFF.md).
+
 ## Design Philosophy
 
 ### Minimal & Focused
@@ -123,6 +141,8 @@ npm run web     # Run web version
 - `lib/supabase.js` - Database client
 - `lib/icons.js` - Hugeicons integration
 - `theme.js` - Color scheme configuration
+- `web/` - Static basket-builder page (no build step)
+- `supabase/functions/resolve-basket/` - Turns a basket code into a priced basket
 
 ## Component Architecture
 
